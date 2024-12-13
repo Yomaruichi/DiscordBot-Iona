@@ -29,4 +29,12 @@ client.on('messageCreate', (msg) => {
     }
 });
 
+client.on('interactionCreate', (interaction) => {
+    if (!interaction.isChatInputCommand()) return;
+
+    if (interaction.commandName === "alecz") {
+        interaction.reply("https://cdn.discordapp.com/attachments/795533957299044376/1052200340042301480/IMG_20221213_202746.jpg?ex=675d79ee&is=675c286e&hm=2de5dfe5a75c811f3dc1f7e8eebff27b81da3302187913ade2725e96f02a356d&");
+    }
+});
+
 client.login(process.env.DISCORD_TOKEN);
