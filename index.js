@@ -19,7 +19,9 @@ client.on('ready', (c) => {
 });
 
 client.on('messageCreate', (msg) => {
-    console.log(msg);
+    if (msg.content === 'hello'){
+        msg.reply('hi');
+    }
 });
 
 client.login(process.env.DISCORD_TOKEN);
