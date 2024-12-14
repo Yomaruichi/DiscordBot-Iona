@@ -1,13 +1,15 @@
-import dotenv from 'dotenv'
-dotenv.config()
-
-import { REST, Routes } from 'discord.js';
+require('dotenv').config();
+const { REST, Routes } = require('discord.js');
 
 const commands = [
     {
         name: 'alecz',
         description: "Alecz's face",
-    }
+    },
+    {
+        name: 'rafael',
+        description: "Rafael's face",
+    },
 ];
 
 const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
