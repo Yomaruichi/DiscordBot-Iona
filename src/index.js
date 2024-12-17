@@ -1,6 +1,7 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
 const mongoose = require('mongoose');
+const { randomInteger, dice } = require('./gambling.js');
 mongoose.connection.on('connected', () => console.log('connected to the database'));
 
 const client = new Client({
@@ -46,6 +47,11 @@ client.on('interactionCreate', (interaction) => {
     }
     if (interaction.commandName === "rafael") {
         interaction.reply("https://cdn.discordapp.com/attachments/795533957299044376/1317344875322282045/scoliosis-illustration-e762a2.png?ex=675e5885&is=675d0705&hm=387d72834428daadcf538400b115a8df75c30f2a35238bf14a56d2860b332bd6&");
+    }
+    if (interaction.commandName === "dice") {
+        const pieces = interaction.options.getNumber("pieces");
+        const sides = interaction.options.getNumber("sides");
+        interaction.reply(`**Pieces:** ${pieces}\n**Sides:** ${sides}\n**You rolled:** ${dice(pieces, sides)}`);
     }
 });
 
