@@ -1,8 +1,10 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits } = require('discord.js');
+const { Client, GatewayIntentBits, Partials, Collection, MessageFlags } = require('discord.js');
 const mongoose = require('mongoose');
-const { randomInteger, dice } = require('./gambling.js');
-mongoose.connection.on('connected', () => console.log('connected to the database'));
+const path = require('path');
+const fs = require('fs');
+
+mongoose.connection.on('connected', () => console.log('Connected to the database'));
 
 const client = new Client({
     intents: [
@@ -12,46 +14,71 @@ const client = new Client({
         GatewayIntentBits.DirectMessages,
         GatewayIntentBits.MessageContent,
     ],
-
+    partials: [
+        Partials.Channel,
+        Partials.Message,
+        Partials.User,
+        Partials.GuildMember,
+    ],
 });
 
+// Load slash commands from the /commands folder (recursive)
+client.commands = new Collection();
+
+const commandsPath = path.join(__dirname, 'commands');
+const commandFiles = fs.readdirSync(commandsPath, { recursive: true })
+    .filter(file => file.endsWith('.js'));
+
+for (const file of commandFiles) {
+    const command = require(path.join(commandsPath, file));
+    if ('data' in command && 'execute' in command) {
+        client.commands.set(command.data.name, command);
+    } else {
+        console.warn(`[WARNING] ${file} is missing "data" or "execute"`);
+    }
+}
+
+// DB connection
 (async () => {
     try {
-        await mongoose.connect(process.env.MONGO_DB, { });
-
+        await mongoose.connect(process.env.MONGO_DB);
     } catch (error) {
-        console.log(error);
+        console.error('Failed to connect to MongoDB:', error);
     }
 })();
 
-client.on('ready', (c) => {
-    console.log(`Logged in as ${c.user?.tag}`);
+client.once('ready', (c) => {
+    console.log(`Logged in as ${c.user.tag}`);
+    console.log(`Loaded ${client.commands.size} command(s)`);
 });
 
 client.on('messageCreate', (msg) => {
+    if (msg.author.bot) return;
 
-    if (msg.author.bot){
-        return;
-    } 
-
-    if (msg.content === 'hello'){
+    if (msg.content.toLowerCase() === 'hello') {
         msg.reply('hi');
     }
 });
 
-client.on('interactionCreate', (interaction) => {
+client.on('interactionCreate', async (interaction) => {
     if (!interaction.isChatInputCommand()) return;
 
-    if (interaction.commandName === "alecz") {
-        interaction.reply("https://cdn.discordapp.com/attachments/795533957299044376/1052200340042301480/IMG_20221213_202746.jpg?ex=675d79ee&is=675c286e&hm=2de5dfe5a75c811f3dc1f7e8eebff27b81da3302187913ade2725e96f02a356d&");
+    const command = client.commands.get(interaction.commandName);
+    if (!command) {
+        console.error(`No command found for: ${interaction.commandName}`);
+        return;
     }
-    if (interaction.commandName === "rafael") {
-        interaction.reply("https://cdn.discordapp.com/attachments/795533957299044376/1317344875322282045/scoliosis-illustration-e762a2.png?ex=675e5885&is=675d0705&hm=387d72834428daadcf538400b115a8df75c30f2a35238bf14a56d2860b332bd6&");
-    }
-    if (interaction.commandName === "dice") {
-        const pieces = interaction.options.getNumber("pieces");
-        const sides = interaction.options.getNumber("sides");
-        interaction.reply(`**Pieces:** ${pieces}\n**Sides:** ${sides}\n**You rolled:** ${dice(pieces, sides)}`);
+
+    try {
+        await command.execute(interaction);
+    } catch (error) {
+        console.error(`Error executing /${interaction.commandName}:`, error);
+        const errorMsg = { content: 'Something went wrong executing that command.', flags: MessageFlags.Ephemeral };
+        if (interaction.replied || interaction.deferred) {
+            await interaction.followUp(errorMsg);
+        } else {
+            await interaction.reply(errorMsg);
+        }
     }
 });
 
